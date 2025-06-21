@@ -1,20 +1,27 @@
-# utils/llm_processor.py
-import requests
 import os
+import requests
+import json
 
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")  # This is pulled from Streamlit secrets
 
 def get_filled_fields(template_text, report_text):
     prompt = f"""
-    You are an insurance claims assistant. The following is an insurance form template with placeholders.
-    Template:
-    {template_text}
+You are an insurance assistant. The following is a template and a photo report. 
+Extract and match fields from the report to fill the template as key-value pairs in JSON format.
 
-    And this is the photo report text:
-    {report_text}
+TEMPLATE:
+{template_text}
 
-    Please extract values for each field in the template and return a JSON object with key-value pairs.
-    """
+REPORT:
+{report_text}
+
+Return only a valid JSON object like:
+{{
+    "Name": "John Doe",
+    "PolicyNumber": "123456",
+    ...
+}}
+"""
 
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
@@ -22,17 +29,23 @@ def get_filled_fields(template_text, report_text):
     }
 
     payload = {
-        "model": "mistralai/mistral-7b-instruct",  # or another valid OpenRouter model
+        "model": "mistralai/mistral-7b-instruct",  # You can try "openai/gpt-3.5-turbo" if available
         "messages": [
             {"role": "user", "content": prompt}
         ]
     }
 
-    response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
-
     try:
+        response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
+        response.raise_for_status()
         json_response = response.json()
-        return json.loads(json_response["choices"][0]["message"]["content"])
+
+        # Log raw response to help with debugging in logs
+        print("LLM response text:", json_response)
+
+        message_content = json_response.get("choices", [{}])[0].get("message", {}).get("content", "")
+        return json.loads(message_content)  # Assumes response is valid JSON string
     except Exception as e:
-        print("❌ Error from LLM API response:", response.text)
-        raise ValueError("Failed to get valid response from LLM API. Check API key, model, or prompt.") from e
+        print("❌ Error communicating with OpenRouter API:", e)
+        print("❌ Full response text (if any):", response.text if response else "No response")
+        return {}  # Return empty dict so app doesn't crash
