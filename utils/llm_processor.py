@@ -29,9 +29,9 @@ Return only a valid JSON object like:
     }
 
     payload = {
-        "model": "mistralai/mistral-7b-instruct",  # You can try "openai/gpt-3.5-turbo" if available
-        "messages": [
-            {"role": "user", "content": prompt}
+        "model": "openai/gpt-3.5-turbo",  # OR "nousresearch/nous-hermes-2-mixtral"
+    "messages": [
+        {"role": "user", "content": prompt}
         ]
     }
 
