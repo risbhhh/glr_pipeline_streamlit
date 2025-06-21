@@ -4,7 +4,11 @@ import re
 import json
 
 def fill_template(docx_file, kv_string):
-    kv_pairs = json.loads(kv_string)
+    if isinstance(kv_string, str):
+        kv_pairs = json.loads(kv_string)
+    else:
+        kv_pairs = kv_string  # Already a dict, use directly
+
     doc = Document(docx_file)
 
     for p in doc.paragraphs:
